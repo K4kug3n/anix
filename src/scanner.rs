@@ -52,6 +52,10 @@ impl Scanner {
         }
     }
 
+    fn is_digit(c: char) -> bool {
+        return c >= '0' && c <= '9';
+    }
+
     fn is_end(&self) -> bool {
         self.current >= self.source.len()
     }
@@ -73,6 +77,28 @@ impl Scanner {
         }
     }
 
+    fn number(&mut self) {
+        while Scanner::is_digit(self.peek()) {
+            self.advance();
+        }
+
+        if self.peek() == '.' && Scanner::is_digit(self.peek_next()) {
+            self.advance();
+
+            while Scanner::is_digit(self.peek()) {
+                self.advance();
+            }
+        }
+
+        let text = &self.source[self.start..self.current];
+        let value = match text.parse() {
+            Ok(v) => v,
+            Err(_) => panic!("Error: scanner::number unable to parse"),
+        };
+
+        self.add_token(TokenType::Number(value));
+    }
+
     fn peek(&self) -> char {
         if self.is_end() {
             return '\0';
@@ -81,6 +107,17 @@ impl Scanner {
         match self.source.chars().nth(self.current) {
             Some(c) => return c,
             None => panic!("Error: scanner::peek out-of-range"),
+        }
+    }
+
+    fn peek_next(&self) -> char {
+        if (self.current + 1) >= self.source.len() {
+            return '\0';
+        }
+
+        match self.source.chars().nth(self.current + 1) {
+            Some(c) => return c,
+            None => panic!("Error: scanner::peek_next out-of-range"),
         }
     }
 
@@ -138,7 +175,14 @@ impl Scanner {
             '\r' => (),
             '\t' => (),
             '\n' => self.line += 1,
-            _ => self.add_error("Unexpected lexeme".to_string()),
+            '"' => self.string(),
+            _ => {
+                if Scanner::is_digit(c) {
+                    self.number()
+                } else {
+                    self.add_error("Unexpected lexeme".to_string());
+                }
+            }
         }
     }
 
@@ -152,5 +196,24 @@ impl Scanner {
             .push(Ok(Token::new(TokenType::Eof, "".to_string(), 0)));
 
         self.tokens.clone()
+    }
+
+    fn string(&mut self) {
+        while self.peek() != '"' && !self.is_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+
+        if self.is_end() {
+            self.add_error("Unterminated string".to_string());
+            return;
+        }
+
+        self.advance();
+
+        let value = &self.source[self.start + 1..self.current - 1];
+        self.add_token(TokenType::String(value.to_string()));
     }
 }

@@ -79,6 +79,28 @@ impl Scanner {
         }
     }
 
+    fn block_comment(&mut self) {
+        let mut nested_block = 1;
+        while nested_block > 0 {
+            while !self.matches('*') {
+                if self.peek() == '\n' {
+                    self.line += 1
+                } else if self.peek() == '/' {
+                    self.advance();
+                    if self.peek() == '*' {
+                        nested_block += 1;
+                    }
+                }
+
+                self.advance();
+            }
+
+            if self.matches('/') {
+                nested_block -= 1;
+            }
+        }
+    }
+
     fn identifier(&mut self) {
         while Scanner::is_alphanumeric(self.peek()) {
             self.advance();
@@ -211,9 +233,11 @@ impl Scanner {
             }
             '/' => {
                 if self.matches('/') {
-                    while self.peek() != '\n' && self.is_end() {
+                    while self.peek() != '\n' && !self.is_end() {
                         self.advance();
                     }
+                } else if self.matches('*') {
+                    self.block_comment();
                 } else {
                     self.add_token(TokenType::Slash);
                 }

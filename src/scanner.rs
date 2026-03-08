@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::token::Token;
 use crate::token::TokenType;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ScanError {
     pub line: usize,
     pub message: String,
@@ -288,5 +288,88 @@ impl Scanner {
 
         let value = &self.source[self.start + 1..self.current - 1];
         self.add_token(TokenType::String(value.to_string()));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_single_characters() {
+        let source = "(){}+-".to_string();
+        let mut scanner = Scanner::new(&source);
+
+        let tokens: Vec<Token> = scanner
+            .scan_tokens()
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("Scanner should not have returned any errors");
+
+        // Check types
+        assert_eq!(tokens[0].kind, TokenType::LeftParen);
+        assert_eq!(tokens[1].kind, TokenType::RightParen);
+        assert_eq!(tokens[2].kind, TokenType::LeftBrace);
+        assert_eq!(tokens[3].kind, TokenType::RightBrace);
+        assert_eq!(tokens[4].kind, TokenType::Plus);
+        assert_eq!(tokens[5].kind, TokenType::Minus);
+    }
+
+    #[test]
+    fn test_string() {
+        let source = "var language = \"anix\";".to_string();
+        let mut scanner = Scanner::new(&source);
+        let tokens: Vec<Token> = scanner
+            .scan_tokens()
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("Scanner should not have returned any errors");
+
+        assert_eq!(tokens[3].kind, TokenType::String("anix".to_string()));
+        assert_eq!(tokens[3].lexeme, "\"anix\"");
+    }
+
+    #[test]
+    fn test_number() {
+        let source = "var number = 42.0;".to_string();
+        let mut scanner = Scanner::new(&source);
+        let tokens: Vec<Token> = scanner
+            .scan_tokens()
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("Scanner should not have returned any errors");
+
+        assert_eq!(tokens[3].kind, TokenType::Number(42.0));
+        assert_eq!(tokens[3].lexeme, "42.0");
+    }
+
+    #[test]
+    fn test_line_comments() {
+        let source = "var line1 // Line comment\nvar line2".to_string();
+        let mut scanner = Scanner::new(&source);
+        let tokens: Vec<Token> = scanner
+            .scan_tokens()
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("Scanner should not have returned any errors");
+
+        assert_eq!(tokens.len(), 5);
+
+        assert_eq!(tokens[2].kind, TokenType::Var);
+    }
+
+    #[test]
+    fn test_block_comments() {
+        let source = "var line1 /*\nLine comment\n/* hi */ */var line2".to_string();
+        let mut scanner = Scanner::new(&source);
+        let tokens: Vec<Token> = scanner
+            .scan_tokens()
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("Scanner should not have returned any errors");
+
+        assert_eq!(tokens.len(), 5);
+
+        assert_eq!(tokens[2].kind, TokenType::Var);
     }
 }

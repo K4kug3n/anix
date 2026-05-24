@@ -1,18 +1,19 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
+use crate::token::Literal;
 use crate::token::Token;
 use crate::token::TokenType;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ScanError {
+pub struct ScannerError {
     pub line: usize,
     pub message: String,
 }
 
 pub struct Scanner {
     source: String,
-    tokens: Vec<Result<Token, ScanError>>,
+    tokens: Vec<Result<Token, ScannerError>>,
 
     start: usize,
     current: usize,
@@ -55,15 +56,15 @@ impl Scanner {
         }
     }
 
-    fn add_token(&mut self, kind: TokenType) {
+    fn add_token(&mut self, kind: TokenType, literal: Option<Literal>) {
         let text = &self.source[self.start..self.current];
         self.tokens
-            .push(Ok(Token::new(kind, text.to_string(), self.line)));
+            .push(Ok(Token::new(kind, text.to_string(), literal, self.line)));
     }
 
     fn add_error(&mut self, message: String) {
         let text = &self.source[self.start..self.current];
-        self.tokens.push(Err(ScanError {
+        self.tokens.push(Err(ScannerError {
             line: self.line,
             message: format!("{} {}", message, text),
         }));
@@ -108,8 +109,11 @@ impl Scanner {
 
         let text = &self.source[self.start..self.current];
         match KEYWORDS.get(text) {
-            Some(kind) => self.add_token(kind.clone()),
-            _ => self.add_token(TokenType::Identifier(text.to_string())),
+            Some(kind) => self.add_token(kind.clone(), None),
+            _ => self.add_token(
+                TokenType::Identifier,
+                Some(Literal::String(text.to_string())),
+            ),
         }
     }
 
@@ -165,7 +169,7 @@ impl Scanner {
             Err(_) => panic!("Error: scanner::number unable to parse"),
         };
 
-        self.add_token(TokenType::Number(value));
+        self.add_token(TokenType::Number, Some(Literal::Num(value)));
     }
 
     fn peek(&self) -> char {
@@ -193,42 +197,42 @@ impl Scanner {
     fn scan_token(&mut self) {
         let c = self.advance();
         match c {
-            '(' => self.add_token(TokenType::LeftParen),
-            ')' => self.add_token(TokenType::RightParen),
-            '{' => self.add_token(TokenType::LeftBrace),
-            '}' => self.add_token(TokenType::RightBrace),
-            ',' => self.add_token(TokenType::Comma),
-            '.' => self.add_token(TokenType::Dot),
-            '-' => self.add_token(TokenType::Minus),
-            '+' => self.add_token(TokenType::Plus),
-            ';' => self.add_token(TokenType::Semicolon),
-            '*' => self.add_token(TokenType::Star),
+            '(' => self.add_token(TokenType::LeftParen, None),
+            ')' => self.add_token(TokenType::RightParen, None),
+            '{' => self.add_token(TokenType::LeftBrace, None),
+            '}' => self.add_token(TokenType::RightBrace, None),
+            ',' => self.add_token(TokenType::Comma, None),
+            '.' => self.add_token(TokenType::Dot, None),
+            '-' => self.add_token(TokenType::Minus, None),
+            '+' => self.add_token(TokenType::Plus, None),
+            ';' => self.add_token(TokenType::Semicolon, None),
+            '*' => self.add_token(TokenType::Star, None),
             '!' => {
                 if self.matches('=') {
-                    self.add_token(TokenType::BangEqual);
+                    self.add_token(TokenType::BangEqual, None);
                 } else {
-                    self.add_token(TokenType::Equal);
+                    self.add_token(TokenType::Bang, None);
                 }
             }
             '=' => {
                 if self.matches('=') {
-                    self.add_token(TokenType::EqualEqual);
+                    self.add_token(TokenType::EqualEqual, None);
                 } else {
-                    self.add_token(TokenType::Equal);
+                    self.add_token(TokenType::Equal, None);
                 }
             }
             '<' => {
                 if self.matches('=') {
-                    self.add_token(TokenType::LessEqual);
+                    self.add_token(TokenType::LessEqual, None);
                 } else {
-                    self.add_token(TokenType::Less);
+                    self.add_token(TokenType::Less, None);
                 }
             }
             '>' => {
                 if self.matches('=') {
-                    self.add_token(TokenType::GreaterEqual);
+                    self.add_token(TokenType::GreaterEqual, None);
                 } else {
-                    self.add_token(TokenType::Greater);
+                    self.add_token(TokenType::Greater, None);
                 }
             }
             '/' => {
@@ -239,7 +243,7 @@ impl Scanner {
                 } else if self.matches('*') {
                     self.block_comment();
                 } else {
-                    self.add_token(TokenType::Slash);
+                    self.add_token(TokenType::Slash, None);
                 }
             }
             ' ' => (),
@@ -259,14 +263,13 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Vec<Result<Token, ScanError>> {
+    pub fn scan_tokens(&mut self) -> Vec<Result<Token, ScannerError>> {
         while !self.is_end() {
             self.start = self.current;
             self.scan_token();
         }
 
-        self.tokens
-            .push(Ok(Token::new(TokenType::Eof, "".to_string(), 0)));
+        self.add_token(TokenType::Eof, None);
 
         self.tokens.clone()
     }
@@ -287,7 +290,7 @@ impl Scanner {
         self.advance();
 
         let value = &self.source[self.start + 1..self.current - 1];
-        self.add_token(TokenType::String(value.to_string()));
+        self.add_token(TokenType::String, Some(Literal::String(value.to_string())));
     }
 }
 
@@ -325,7 +328,8 @@ mod tests {
             .collect::<Result<Vec<_>, _>>()
             .expect("Scanner should not have returned any errors");
 
-        assert_eq!(tokens[3].kind, TokenType::String("anix".to_string()));
+        assert_eq!(tokens[3].kind, TokenType::String);
+        assert_eq!(tokens[3].literal, Some(Literal::String("anix".to_string())));
         assert_eq!(tokens[3].lexeme, "\"anix\"");
     }
 
@@ -339,7 +343,8 @@ mod tests {
             .collect::<Result<Vec<_>, _>>()
             .expect("Scanner should not have returned any errors");
 
-        assert_eq!(tokens[3].kind, TokenType::Number(42.0));
+        assert_eq!(tokens[3].kind, TokenType::Number);
+        assert_eq!(tokens[3].literal, Some(Literal::Num(42.0)));
         assert_eq!(tokens[3].lexeme, "42.0");
     }
 

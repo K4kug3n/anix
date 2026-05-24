@@ -1,13 +1,6 @@
 use std::fmt;
 
-use crate::token::{Token, TokenType};
-
-pub enum Object {
-    Num(f64),
-    String(String),
-    Bool(bool),
-    Nil,
-}
+use crate::token::{Literal, Token, TokenType};
 
 pub enum Expr {
     Binary {
@@ -16,7 +9,7 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Grouping(Box<Expr>),
-    Literal(Object),
+    Literal(Literal),
     Unary {
         op: Token,
         right: Box<Expr>,
@@ -72,16 +65,18 @@ mod tests {
                 op: Token {
                     kind: TokenType::Minus,
                     lexeme: "-".to_string(),
+                    literal: None,
                     line: 1,
                 },
-                right: Box::new(Expr::Literal(Object::Num(123.0))),
+                right: Box::new(Expr::Literal(Literal::Num(123.0))),
             }),
             op: Token {
                 kind: TokenType::Star,
                 lexeme: "*".to_string(),
+                literal: None,
                 line: 1,
             },
-            right: Box::new(Expr::Grouping(Box::new(Expr::Literal(Object::Num(45.67))))),
+            right: Box::new(Expr::Grouping(Box::new(Expr::Literal(Literal::Num(45.67))))),
         };
 
         let result = print_ast(&expression);

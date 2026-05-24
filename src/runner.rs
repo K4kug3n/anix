@@ -3,6 +3,8 @@ use std::io;
 use std::io::Write;
 
 use crate::scanner::Scanner;
+use crate::scanner::ScannerError;
+use crate::token::Token;
 
 fn error(line: usize, message: &str) {
     report(line, "", message);
@@ -14,20 +16,32 @@ fn report(line: usize, pos: &str, message: &str) {
 
 fn run(content: &String) -> bool {
     let mut scanner = Scanner::new(content);
-    let tokens = scanner.scan_tokens();
 
-    let mut has_error = false;
-    for res in tokens {
-        match res {
-            Ok(t) => println!("{}", t),
-            Err(e) => {
-                error(e.line, &e.message);
-                has_error = true;
-            }
+    let scanned_results: Vec<Result<Token, ScannerError>> = scanner.scan_tokens();
+
+    let mut valid_tokens = Vec::new();
+    let mut scanner_errors = Vec::new();
+
+    for result in scanned_results {
+        match result {
+            Ok(token) => valid_tokens.push(token),
+            Err(err) => scanner_errors.push(err),
         }
     }
 
-    !has_error
+    for err in &scanner_errors {
+        error(err.line, &err.message);
+    }
+
+    if !scanner_errors.is_empty() {
+        return false;
+    }
+
+    for t in valid_tokens {
+        println!("{}", t)
+    }
+
+    true
 }
 
 pub fn run_file(file: &String) -> bool {

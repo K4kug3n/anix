@@ -26,9 +26,9 @@ pub enum TokenType {
     LessEqual,
 
     // Literals.
-    Identifier(String),
-    String(String),
-    Number(f64),
+    Identifier,
+    String,
+    Number,
 
     // Keywords.
     And,
@@ -51,10 +51,19 @@ pub enum TokenType {
     Eof,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Literal {
+    String(String),
+    Num(f64),
+    Bool(bool),
+    Nil,
+}
+
 #[derive(Clone)]
 pub struct Token {
     pub kind: TokenType,
     pub lexeme: String,
+    pub literal: Option<Literal>,
 
     pub line: usize,
 }
@@ -66,10 +75,11 @@ impl fmt::Display for Token {
 }
 
 impl Token {
-    pub fn new(kind: TokenType, lexeme: String, line: usize) -> Token {
+    pub fn new(kind: TokenType, lexeme: String, literal: Option<Literal>, line: usize) -> Token {
         Token {
             kind: kind,
             lexeme: lexeme,
+            literal: literal,
 
             line: line,
         }

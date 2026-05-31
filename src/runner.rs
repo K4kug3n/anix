@@ -2,6 +2,8 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
+use crate::expr;
+use crate::parser::Parser;
 use crate::scanner::Scanner;
 use crate::scanner::ScannerError;
 use crate::token::Token;
@@ -19,12 +21,12 @@ fn run(content: &String) -> bool {
 
     let scanned_results: Vec<Result<Token, ScannerError>> = scanner.scan_tokens();
 
-    let mut valid_tokens = Vec::new();
+    let mut tokens = Vec::new();
     let mut scanner_errors = Vec::new();
 
     for result in scanned_results {
         match result {
-            Ok(token) => valid_tokens.push(token),
+            Ok(token) => tokens.push(token),
             Err(err) => scanner_errors.push(err),
         }
     }
@@ -37,9 +39,13 @@ fn run(content: &String) -> bool {
         return false;
     }
 
-    for t in valid_tokens {
+    for t in &tokens {
         println!("{}", t)
     }
+
+    let mut parser = Parser::new(tokens);
+    let expr = parser.parse();
+    println!("{}", expr::print_ast(&expr));
 
     true
 }

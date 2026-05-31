@@ -14,6 +14,7 @@ pub enum Expr {
         op: Token,
         right: Box<Expr>,
     },
+    Error,
 }
 
 impl fmt::Display for Expr {
@@ -49,6 +50,9 @@ pub fn print_ast(expr: &Expr) -> String {
         },
         Expr::Unary { op, right } => {
             return parenthesize(&op.lexeme, vec![right]);
+        }
+        Expr::Error => {
+            return "Error".to_string();
         }
     }
 }

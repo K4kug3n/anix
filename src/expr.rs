@@ -1,6 +1,7 @@
 use std::fmt;
 
-use crate::token::{Literal, Token, TokenType};
+use crate::token::{Token, TokenType};
+use crate::types::Literal;
 
 pub enum Expr {
     Binary {

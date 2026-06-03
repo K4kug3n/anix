@@ -1,5 +1,6 @@
 use crate::expr::Expr;
-use crate::token::{Literal, Token, TokenType};
+use crate::token::{Token, TokenType};
+use crate::types::Literal;
 
 struct ParserError {
     line: usize,

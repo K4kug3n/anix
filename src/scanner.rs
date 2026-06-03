@@ -1,9 +1,8 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-use crate::token::Literal;
-use crate::token::Token;
-use crate::token::TokenType;
+use crate::token::{Token, TokenType};
+use crate::types::Literal;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScannerError {

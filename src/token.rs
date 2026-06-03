@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::types::Literal;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
@@ -49,14 +51,6 @@ pub enum TokenType {
     While,
 
     Eof,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Literal {
-    String(String),
-    Num(f64),
-    Bool(bool),
-    Nil,
 }
 
 #[derive(Clone)]

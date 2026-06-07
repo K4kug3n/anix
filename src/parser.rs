@@ -238,3 +238,141 @@ impl Parser {
         self.primary()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_tokens(mut tokens: Vec<Token>) -> Expr {
+        // Add EOF token for valid sequence
+        tokens.push(Token::new(TokenType::Eof, "".to_string(), None, 0));
+
+        let mut parser = Parser::new(tokens);
+        parser.parse()
+    }
+
+    #[test]
+    fn test_number() {
+        let value = 12.3;
+        let num = Token::from_literal(TokenType::Number, Literal::Num(value), 0);
+
+        let tokens = vec![num];
+        let expr = parse_tokens(tokens);
+
+        assert_eq!(expr, Expr::Literal(Literal::Num(value)))
+    }
+
+    #[test]
+    fn test_number_product() {
+        let value = 12.3;
+        let op = Token::from_operand(TokenType::Star, "*", 0);
+        let num = Token::from_literal(TokenType::Number, Literal::Num(value), 0);
+
+        let tokens = vec![num.clone(), op.clone(), num.clone()];
+        let expr = parse_tokens(tokens);
+
+        assert_eq!(
+            expr,
+            Expr::Binary {
+                left: Box::new(Expr::Literal(Literal::Num(value))),
+                op: op,
+                right: Box::new(Expr::Literal(Literal::Num(value))),
+            }
+        )
+    }
+
+    #[test]
+    fn test_bool_gt() {
+        let value = true;
+        let boolean = Token::from_operand(TokenType::True, "true", 0);
+        let op = Token::from_operand(TokenType::GreaterEqual, ">=", 0);
+
+        let tokens = vec![boolean.clone(), op.clone(), boolean.clone()];
+        let expr = parse_tokens(tokens);
+
+        assert_eq!(
+            expr,
+            Expr::Binary {
+                left: Box::new(Expr::Literal(Literal::Bool(value))),
+                op,
+                right: Box::new(Expr::Literal(Literal::Bool(value)))
+            }
+        );
+    }
+
+    #[test]
+    fn test_unary_minus() {
+        let value = 12.3;
+        let num = Token::from_literal(TokenType::Number, Literal::Num(value), 0);
+        let op = Token::from_operand(TokenType::Minus, "-", 0);
+
+        let tokens = vec![op.clone(), num];
+        let expr = parse_tokens(tokens);
+
+        assert_eq!(
+            expr,
+            Expr::Unary {
+                op,
+                right: Box::new(Expr::Literal(Literal::Num(value)))
+            }
+        )
+    }
+
+    #[test]
+    fn test_operator_precedence_product() {
+        let value1 = 12.3;
+        let num1 = Token::from_literal(TokenType::Number, Literal::Num(value1), 0);
+        let op1 = Token::from_operand(TokenType::Plus, "+", 0);
+        let value2 = 2.13;
+        let num2 = Token::from_literal(TokenType::Number, Literal::Num(value2), 0);
+        let op2 = Token::from_operand(TokenType::Star, "*", 0);
+        let value3 = 31.2;
+        let num3 = Token::from_literal(TokenType::Number, Literal::Num(value3), 0);
+
+        let tokens = vec![num1, op1.clone(), num2, op2.clone(), num3];
+        let expr = parse_tokens(tokens);
+
+        assert_eq!(
+            expr,
+            Expr::Binary {
+                left: Box::new(Expr::Literal(Literal::Num(value1))),
+                op: op1,
+                right: Box::new(Expr::Binary {
+                    left: Box::new(Expr::Literal(Literal::Num(value2))),
+                    op: op2,
+                    right: Box::new(Expr::Literal(Literal::Num(value3))),
+                })
+            }
+        );
+    }
+
+    #[test]
+    fn test_grouping() {
+        let l_par = Token::from_operand(TokenType::LeftParen, "(", 0);
+        let value1 = 12.3;
+        let num1 = Token::from_literal(TokenType::Number, Literal::Num(value1), 0);
+        let op1 = Token::from_operand(TokenType::Plus, "+", 0);
+        let value2 = 2.13;
+        let num2 = Token::from_literal(TokenType::Number, Literal::Num(value2), 0);
+        let r_par = Token::from_operand(TokenType::RightParen, ")", 0);
+        let op2 = Token::from_operand(TokenType::Star, "*", 0);
+        let value3 = 31.2;
+        let num3 = Token::from_literal(TokenType::Number, Literal::Num(value3), 0);
+
+        let tokens = vec![l_par, num1, op1.clone(), num2, r_par, op2.clone(), num3];
+        let expr = parse_tokens(tokens);
+
+        assert_eq!(
+            expr,
+            Expr::Binary {
+                left: Box::new(Expr::Grouping(Box::new(Expr::Binary {
+                    left: Box::new(Expr::Literal(Literal::Num(value1))),
+                    op: op1,
+                    right: Box::new(Expr::Literal(Literal::Num(value2)))
+                }))),
+                op: op2,
+                right: Box::new(Expr::Literal(Literal::Num(value3)))
+            }
+        );
+    }
+}

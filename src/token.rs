@@ -53,7 +53,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     pub kind: TokenType,
     pub lexeme: String,
@@ -80,5 +80,13 @@ impl Token {
 
             line: line,
         }
+    }
+
+    pub fn from_literal(kind: TokenType, literal: Literal, line: usize) -> Token {
+        Token::new(kind, literal.to_string(), Some(literal), line)
+    }
+
+    pub fn from_operand(kind: TokenType, lexeme: &str, line: usize) -> Token {
+        Token::new(kind, lexeme.to_string(), None, line)
     }
 }

@@ -3,6 +3,7 @@ use std::fmt;
 use crate::token::Token;
 use crate::types::Literal;
 
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,

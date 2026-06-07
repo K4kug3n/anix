@@ -2,10 +2,10 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
-use crate::expr;
+use crate::expr::print_ast;
+use crate::interpreter::{Interpreter, RuntimeError};
 use crate::parser::Parser;
-use crate::scanner::Scanner;
-use crate::scanner::ScannerError;
+use crate::scanner::{Scanner, ScannerError};
 use crate::token::Token;
 
 fn error(line: usize, message: &str) {
@@ -14,6 +14,13 @@ fn error(line: usize, message: &str) {
 
 fn report(line: usize, pos: &str, message: &str) {
     println!("[line {}] Error {}: {}", line, pos, message);
+}
+
+fn runtime_error(error: &RuntimeError) {
+    match error {
+        RuntimeError::TypeError { message } => println!("Runtime error: {}", message),
+        RuntimeError::ParserError => println!("Runtime error: parser error detected."),
+    }
 }
 
 fn run(content: &String) -> bool {
@@ -45,7 +52,15 @@ fn run(content: &String) -> bool {
 
     let mut parser = Parser::new(tokens);
     let expr = parser.parse();
-    println!("{}", expr::print_ast(&expr));
+    println!("{}", print_ast(&expr));
+
+    let interpreter = Interpreter::new();
+    let value = interpreter.evaluate(&expr);
+
+    match value {
+        Ok(value) => println!("{}", value),
+        Err(e) => runtime_error(&e),
+    }
 
     true
 }

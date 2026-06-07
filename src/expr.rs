@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::token::{Token, TokenType};
+use crate::token::Token;
 use crate::types::Literal;
 
 pub enum Expr {

@@ -64,7 +64,10 @@ pub struct Token {
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Token {:?} ({})", self.kind, self.lexeme)
+        match self.kind {
+            TokenType::Eof => write!(f, "Token {:?}", self.kind),
+            _ => write!(f, "Token {:?} ({})", self.kind, self.lexeme),
+        }
     }
 }
 

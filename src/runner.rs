@@ -18,8 +18,11 @@ fn report(line: usize, pos: &str, message: &str) {
 
 fn runtime_error(error: &RuntimeError) {
     match error {
-        RuntimeError::TypeError { message } => println!("Runtime error: {}", message),
-        RuntimeError::ParserError => println!("Runtime error: parser error detected."),
+        RuntimeError::TypeError { message } => println!("[Runtime error] Type error: {}", message),
+        RuntimeError::OperationError { message } => {
+            println!("[Runtime error] Invalid operation: {}", message)
+        }
+        RuntimeError::ParserError => println!("[Runtime error] Parser error detected."),
     }
 }
 

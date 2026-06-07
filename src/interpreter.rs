@@ -1,6 +1,6 @@
 use crate::{expr::Expr, token::TokenType, types::Literal};
 
-use std::fmt;
+use std::fmt::{self, format};
 
 #[derive(PartialEq)]
 pub enum Value {
@@ -27,6 +27,7 @@ fn is_equal(x: &Value, y: &Value) -> bool {
 
 pub enum RuntimeError {
     TypeError { message: String },
+    OperationError { message: String },
     ParserError,
 }
 
@@ -80,7 +81,15 @@ impl Interpreter {
                 }),
             },
             TokenType::Slash => match (&l_value, &r_value) {
-                (Value::Number(x), Value::Number(y)) => Ok(Value::Number(x / y)),
+                (Value::Number(x), Value::Number(y)) => {
+                    if *y == 0.0 {
+                        return Err(RuntimeError::OperationError {
+                            message: "Division by 0.0".to_string(),
+                        });
+                    }
+
+                    return Ok(Value::Number(x / y));
+                }
                 _ => Err(RuntimeError::TypeError {
                     message: format!("Operands should be Number, got {} and {}", l_value, r_value),
                 }),

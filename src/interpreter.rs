@@ -1,4 +1,4 @@
-use crate::{expr::Expr, token::TokenType, types::Literal};
+use crate::{expr::Expr, stmt::Stmt, token::TokenType, types::Literal};
 
 use std::fmt::{self, format};
 
@@ -38,13 +38,10 @@ impl Interpreter {
         Interpreter {}
     }
 
-    pub fn evaluate(&self, expr: &Expr) -> Result<Value, RuntimeError> {
-        match expr {
-            Expr::Binary { left, op, right } => self.evaluate_binary(left, &op.kind, right),
-            Expr::Literal(litteral) => self.evaluate_litteral(litteral),
-            Expr::Grouping(group) => self.evaluate(group),
-            Expr::Unary { op, right } => self.evaluate_unary(&op.kind, right),
-            Expr::Error => Err(RuntimeError::ParserError),
+    fn execute(&self, stmt: &Stmt) -> Option<RuntimeError> {
+        match stmt {
+            Stmt::Expr(expr) => self.visit_expr_stmt(expr),
+            Stmt::Print(expr) => self.visit_print_stmt(expr),
         }
     }
 
@@ -146,6 +143,16 @@ impl Interpreter {
         }
     }
 
+    fn evaluate(&self, expr: &Expr) -> Result<Value, RuntimeError> {
+        match expr {
+            Expr::Binary { left, op, right } => self.evaluate_binary(left, &op.kind, right),
+            Expr::Literal(litteral) => self.evaluate_litteral(litteral),
+            Expr::Grouping(group) => self.evaluate(group),
+            Expr::Unary { op, right } => self.evaluate_unary(&op.kind, right),
+            Expr::Error => Err(RuntimeError::ParserError),
+        }
+    }
+
     fn evaluate_litteral(&self, litteral: &Literal) -> Result<Value, RuntimeError> {
         match litteral {
             Literal::Num(x) => Ok(Value::Number(*x)),
@@ -175,6 +182,14 @@ impl Interpreter {
         }
     }
 
+    pub fn interpret(&self, statments: &Vec<Stmt>) -> Option<RuntimeError> {
+        for stmt in statments {
+            self.execute(stmt)?;
+        }
+
+        None
+    }
+
     fn is_truthy(&self, value: &Value) -> bool {
         if *value == Value::Nil {
             return false;
@@ -184,5 +199,26 @@ impl Interpreter {
         }
 
         true
+    }
+
+    fn visit_expr_stmt(&self, expr: &Expr) -> Option<RuntimeError> {
+        let value = self.evaluate(expr);
+
+        match value {
+            Ok(_) => None,
+            Err(e) => Some(e),
+        }
+    }
+
+    fn visit_print_stmt(&self, expr: &Expr) -> Option<RuntimeError> {
+        let value = self.evaluate(expr);
+
+        match value {
+            Ok(x) => {
+                println!("{}", x);
+                None
+            }
+            Err(e) => Some(e),
+        }
     }
 }

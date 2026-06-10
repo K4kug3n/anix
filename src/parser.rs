@@ -1,17 +1,18 @@
 use crate::expr::Expr;
+use crate::stmt::Stmt;
 use crate::token::{Token, TokenType};
 use crate::types::Literal;
 
-struct ParserError {
-    line: usize,
-    msg: String,
-    token: Token,
+pub struct ParserError {
+    pub line: usize,
+    pub msg: String,
+    pub token: Token,
 }
 
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
-    errors: Vec<ParserError>,
+    pub errors: Vec<ParserError>,
 }
 
 impl Parser {
@@ -99,6 +100,21 @@ impl Parser {
         self.equality()
     }
 
+    fn expression_statement(&mut self) -> Stmt {
+        let expr = self.expression();
+        if !self.consume(TokenType::Semicolon) {
+            let token = self.peek();
+            let msg = format!("Expected ';' found {}", token.lexeme);
+            self.error(msg, token);
+
+            self.synchronize();
+
+            return Stmt::Expr(Expr::Error);
+        }
+
+        Stmt::Expr(expr)
+    }
+
     fn factor(&mut self) -> Expr {
         let mut expr = self.unary();
 
@@ -130,8 +146,13 @@ impl Parser {
         false
     }
 
-    pub fn parse(&mut self) -> Expr {
-        self.expression()
+    pub fn parse(&mut self) -> Vec<Stmt> {
+        let mut statments = Vec::new();
+        while !self.is_at_end() {
+            statments.push(self.statement());
+        }
+
+        statments
     }
 
     fn peek(&self) -> Token {
@@ -161,7 +182,7 @@ impl Parser {
             let expr = self.expression();
             if !self.consume(TokenType::RightParen) {
                 let token = self.peek();
-                let msg = format!("[Line {}] Expected ')', found {}", token.line, token.lexeme);
+                let msg = format!("Expected ')', found {}", token.lexeme);
                 self.error(msg, token);
 
                 self.synchronize();
@@ -173,14 +194,34 @@ impl Parser {
         }
 
         let token = self.peek();
-        let msg = format!(
-            "[Line {}] Expected expression, found {}",
-            token.line, token.lexeme
-        );
+        let msg = format!("Expected expression, found {}", token.lexeme);
         self.error(msg, token);
         self.synchronize();
 
         return Expr::Error;
+    }
+
+    fn print_statement(&mut self) -> Stmt {
+        let expr = self.expression();
+        if !self.consume(TokenType::Semicolon) {
+            let token = self.peek();
+            let msg = format!("Expected ';' found {}", token.lexeme);
+            self.error(msg, token);
+
+            self.synchronize();
+
+            return Stmt::Expr(Expr::Error);
+        }
+
+        Stmt::Print(expr)
+    }
+
+    fn statement(&mut self) -> Stmt {
+        if self.matches(vec![TokenType::Print]) {
+            return self.print_statement();
+        }
+
+        self.expression_statement()
     }
 
     fn synchronize(&mut self) {
@@ -243,7 +284,7 @@ impl Parser {
 mod tests {
     use super::*;
 
-    fn parse_tokens(mut tokens: Vec<Token>) -> Expr {
+    fn parse_tokens(mut tokens: Vec<Token>) -> Vec<Stmt> {
         // Add EOF token for valid sequence
         tokens.push(Token::new(TokenType::Eof, "".to_string(), None, 0));
 
@@ -255,11 +296,13 @@ mod tests {
     fn test_number() {
         let value = 12.3;
         let num = Token::from_literal(TokenType::Number, Literal::Num(value), 0);
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
 
-        let tokens = vec![num];
-        let expr = parse_tokens(tokens);
+        let tokens = vec![num, sc];
+        let stmts = parse_tokens(tokens);
 
-        assert_eq!(expr, Expr::Literal(Literal::Num(value)))
+        assert_eq!(stmts.len(), 1);
+        assert_eq!(stmts[0], Stmt::Expr(Expr::Literal(Literal::Num(value))))
     }
 
     #[test]
@@ -267,17 +310,19 @@ mod tests {
         let value = 12.3;
         let op = Token::from_operand(TokenType::Star, "*", 0);
         let num = Token::from_literal(TokenType::Number, Literal::Num(value), 0);
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
 
-        let tokens = vec![num.clone(), op.clone(), num.clone()];
-        let expr = parse_tokens(tokens);
+        let tokens = vec![num.clone(), op.clone(), num.clone(), sc];
+        let stmts = parse_tokens(tokens);
 
+        assert_eq!(stmts.len(), 1);
         assert_eq!(
-            expr,
-            Expr::Binary {
+            stmts[0],
+            Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Literal(Literal::Num(value))),
                 op: op,
                 right: Box::new(Expr::Literal(Literal::Num(value))),
-            }
+            })
         )
     }
 
@@ -286,17 +331,19 @@ mod tests {
         let value = true;
         let boolean = Token::from_operand(TokenType::True, "true", 0);
         let op = Token::from_operand(TokenType::GreaterEqual, ">=", 0);
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
 
-        let tokens = vec![boolean.clone(), op.clone(), boolean.clone()];
-        let expr = parse_tokens(tokens);
+        let tokens = vec![boolean.clone(), op.clone(), boolean.clone(), sc];
+        let stmts = parse_tokens(tokens);
 
+        assert_eq!(stmts.len(), 1);
         assert_eq!(
-            expr,
-            Expr::Binary {
+            stmts[0],
+            Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Literal(Literal::Bool(value))),
                 op,
                 right: Box::new(Expr::Literal(Literal::Bool(value)))
-            }
+            })
         );
     }
 
@@ -305,16 +352,18 @@ mod tests {
         let value = 12.3;
         let num = Token::from_literal(TokenType::Number, Literal::Num(value), 0);
         let op = Token::from_operand(TokenType::Minus, "-", 0);
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
 
-        let tokens = vec![op.clone(), num];
-        let expr = parse_tokens(tokens);
+        let tokens = vec![op.clone(), num, sc];
+        let stmts = parse_tokens(tokens);
 
+        assert_eq!(stmts.len(), 1);
         assert_eq!(
-            expr,
-            Expr::Unary {
+            stmts[0],
+            Stmt::Expr(Expr::Unary {
                 op,
                 right: Box::new(Expr::Literal(Literal::Num(value)))
-            }
+            })
         )
     }
 
@@ -328,13 +377,15 @@ mod tests {
         let op2 = Token::from_operand(TokenType::Star, "*", 0);
         let value3 = 31.2;
         let num3 = Token::from_literal(TokenType::Number, Literal::Num(value3), 0);
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
 
-        let tokens = vec![num1, op1.clone(), num2, op2.clone(), num3];
-        let expr = parse_tokens(tokens);
+        let tokens = vec![num1, op1.clone(), num2, op2.clone(), num3, sc];
+        let stmts = parse_tokens(tokens);
 
+        assert_eq!(stmts.len(), 1);
         assert_eq!(
-            expr,
-            Expr::Binary {
+            stmts[0],
+            Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Literal(Literal::Num(value1))),
                 op: op1,
                 right: Box::new(Expr::Binary {
@@ -342,7 +393,7 @@ mod tests {
                     op: op2,
                     right: Box::new(Expr::Literal(Literal::Num(value3))),
                 })
-            }
+            })
         );
     }
 
@@ -358,13 +409,15 @@ mod tests {
         let op2 = Token::from_operand(TokenType::Star, "*", 0);
         let value3 = 31.2;
         let num3 = Token::from_literal(TokenType::Number, Literal::Num(value3), 0);
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
 
-        let tokens = vec![l_par, num1, op1.clone(), num2, r_par, op2.clone(), num3];
-        let expr = parse_tokens(tokens);
+        let tokens = vec![l_par, num1, op1.clone(), num2, r_par, op2.clone(), num3, sc];
+        let stmts = parse_tokens(tokens);
 
+        assert_eq!(stmts.len(), 1);
         assert_eq!(
-            expr,
-            Expr::Binary {
+            stmts[0],
+            Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Grouping(Box::new(Expr::Binary {
                     left: Box::new(Expr::Literal(Literal::Num(value1))),
                     op: op1,
@@ -372,7 +425,80 @@ mod tests {
                 }))),
                 op: op2,
                 right: Box::new(Expr::Literal(Literal::Num(value3)))
-            }
+            })
+        );
+    }
+
+    #[test]
+    fn test_print_stmt() {
+        let print = Token::from_operand(TokenType::Print, "print", 0);
+        let value1 = 12.3;
+        let num1 = Token::from_literal(TokenType::Number, Literal::Num(value1), 0);
+        let op = Token::from_operand(TokenType::Plus, "+", 0);
+        let value2 = 2.13;
+        let num2 = Token::from_literal(TokenType::Number, Literal::Num(value2), 0);
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
+
+        let tokens = vec![print, num1, op.clone(), num2, sc];
+        let stmts = parse_tokens(tokens);
+
+        assert_eq!(stmts.len(), 1);
+        assert_eq!(
+            stmts[0],
+            Stmt::Print(Expr::Binary {
+                left: Box::new(Expr::Literal(Literal::Num(value1))),
+                op: op.clone(),
+                right: Box::new(Expr::Literal(Literal::Num(value2)))
+            })
+        );
+    }
+
+    #[test]
+    fn test_multiple_stmt() {
+        let value1 = 12.3;
+        let num1 = Token::from_literal(TokenType::Number, Literal::Num(value1), 0);
+        let op1 = Token::from_operand(TokenType::Plus, "+", 0);
+        let value2 = 2.13;
+        let num2 = Token::from_literal(TokenType::Number, Literal::Num(value2), 0);
+
+        let print = Token::from_operand(TokenType::Print, "print", 0);
+        let value3 = 31.2;
+        let num3 = Token::from_literal(TokenType::Number, Literal::Num(value3), 0);
+        let op2 = Token::from_operand(TokenType::Star, "*", 0);
+        let value4 = 23.1;
+        let num4 = Token::from_literal(TokenType::Number, Literal::Num(value4), 0);
+
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
+
+        let tokens = vec![
+            num1,
+            op1.clone(),
+            num2,
+            sc.clone(),
+            print,
+            num3,
+            op2.clone(),
+            num4,
+            sc,
+        ];
+        let stmts = parse_tokens(tokens);
+
+        assert_eq!(stmts.len(), 2);
+        assert_eq!(
+            stmts[0],
+            Stmt::Expr(Expr::Binary {
+                left: Box::new(Expr::Literal(Literal::Num(value1))),
+                op: op1,
+                right: Box::new(Expr::Literal(Literal::Num(value2)))
+            })
+        );
+        assert_eq!(
+            stmts[1],
+            Stmt::Print(Expr::Binary {
+                left: Box::new(Expr::Literal(Literal::Num(value3))),
+                op: op2,
+                right: Box::new(Expr::Literal(Literal::Num(value4)))
+            })
         );
     }
 }

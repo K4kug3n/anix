@@ -54,15 +54,26 @@ fn run(content: &String) -> bool {
     }
 
     let mut parser = Parser::new(tokens);
-    let expr = parser.parse();
-    println!("{}", print_ast(&expr));
+    let stmts = parser.parse();
+
+    for err in &parser.errors {
+        println!("{}", err.msg);
+    }
+
+    if !parser.errors.is_empty() {
+        return false;
+    }
+
+    for (i, stmt) in stmts.iter().enumerate() {
+        println!("{}: {}", i, stmt);
+    }
 
     let interpreter = Interpreter::new();
-    let value = interpreter.evaluate(&expr);
+    let error = interpreter.interpret(&stmts);
 
-    match value {
-        Ok(value) => println!("{}", value),
-        Err(e) => runtime_error(&e),
+    match error {
+        Some(e) => runtime_error(&e),
+        None => {}
     }
 
     true

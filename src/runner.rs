@@ -72,11 +72,12 @@ fn run(content: &String) -> bool {
     let error = interpreter.interpret(&stmts);
 
     match error {
-        Some(e) => runtime_error(&e),
-        None => {}
+        Ok(()) => true,
+        Err(e) => {
+            runtime_error(&e);
+            false
+        }
     }
-
-    true
 }
 
 pub fn run_file(file: &String) -> bool {

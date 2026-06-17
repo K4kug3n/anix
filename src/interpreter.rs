@@ -31,7 +31,7 @@ impl Interpreter {
         Interpreter {}
     }
 
-    fn execute(&self, stmt: &Stmt) -> Option<RuntimeError> {
+    fn execute(&self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
             Stmt::Expr(expr) => self.visit_expr_stmt(expr),
             Stmt::Print(expr) => self.visit_print_stmt(expr),
@@ -175,12 +175,12 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret(&self, statments: &Vec<Stmt>) -> Option<RuntimeError> {
+    pub fn interpret(&self, statments: &Vec<Stmt>) -> Result<(), RuntimeError> {
         for stmt in statments {
             self.execute(stmt)?;
         }
 
-        None
+        Ok(())
     }
 
     fn is_truthy(&self, value: &Value) -> bool {
@@ -194,24 +194,16 @@ impl Interpreter {
         true
     }
 
-    fn visit_expr_stmt(&self, expr: &Expr) -> Option<RuntimeError> {
-        let value = self.evaluate(expr);
+    fn visit_expr_stmt(&self, expr: &Expr) -> Result<(), RuntimeError> {
+        self.evaluate(expr)?;
 
-        match value {
-            Ok(_) => None,
-            Err(e) => Some(e),
-        }
+        Ok(())
     }
 
-    fn visit_print_stmt(&self, expr: &Expr) -> Option<RuntimeError> {
-        let value = self.evaluate(expr);
+    fn visit_print_stmt(&self, expr: &Expr) -> Result<(), RuntimeError> {
+        let value = self.evaluate(expr)?;
+        println!("{}", value);
 
-        match value {
-            Ok(x) => {
-                println!("{}", x);
-                None
-            }
-            Err(e) => Some(e),
-        }
+        Ok(())
     }
 }

@@ -105,11 +105,11 @@ impl Parser {
         if !self.consume(TokenType::Semicolon) {
             let token = self.peek();
             let msg = format!("Expected ';' found {}", token.lexeme);
-            self.error(msg, token);
+            self.error(msg, token.clone());
 
             self.synchronize();
 
-            return Stmt::Expr(Expr::Error);
+            return Stmt::Expr(Expr::Error(token));
         }
 
         Stmt::Expr(expr)
@@ -183,11 +183,11 @@ impl Parser {
             if !self.consume(TokenType::RightParen) {
                 let token = self.peek();
                 let msg = format!("Expected ')', found {}", token.lexeme);
-                self.error(msg, token);
+                self.error(msg, token.clone());
 
                 self.synchronize();
 
-                return Expr::Error;
+                return Expr::Error(token);
             }
 
             return Expr::Grouping(Box::new(expr));
@@ -195,10 +195,10 @@ impl Parser {
 
         let token = self.peek();
         let msg = format!("Expected expression, found {}", token.lexeme);
-        self.error(msg, token);
+        self.error(msg, token.clone());
         self.synchronize();
 
-        return Expr::Error;
+        return Expr::Error(token);
     }
 
     fn print_statement(&mut self) -> Stmt {
@@ -206,11 +206,11 @@ impl Parser {
         if !self.consume(TokenType::Semicolon) {
             let token = self.peek();
             let msg = format!("Expected ';' found {}", token.lexeme);
-            self.error(msg, token);
+            self.error(msg, token.clone());
 
             self.synchronize();
 
-            return Stmt::Expr(Expr::Error);
+            return Stmt::Expr(Expr::Error(token));
         }
 
         Stmt::Print(expr)

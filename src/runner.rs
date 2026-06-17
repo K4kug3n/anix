@@ -3,7 +3,7 @@ use std::io;
 use std::io::Write;
 
 use crate::expr::print_ast;
-use crate::interpreter::{Interpreter, RuntimeError};
+use crate::interpreter::{Interpreter, RuntimeError, RuntimeErrorType};
 use crate::parser::Parser;
 use crate::scanner::{Scanner, ScannerError};
 use crate::token::Token;
@@ -17,12 +17,19 @@ fn report(line: usize, pos: &str, message: &str) {
 }
 
 fn runtime_error(error: &RuntimeError) {
-    match error {
-        RuntimeError::TypeError { message } => println!("[Runtime error] Type error: {}", message),
-        RuntimeError::OperationError { message } => {
-            println!("[Runtime error] Invalid operation: {}", message)
+    eprintln!(
+        "[line {}] Runtime error at '{}'",
+        error.token.line, error.token.lexeme
+    );
+
+    match &error.kind {
+        RuntimeErrorType::TypeError { message } => {
+            println!("Type error: {}", message)
         }
-        RuntimeError::ParserError => println!("[Runtime error] Parser error detected."),
+        RuntimeErrorType::OperationError { message } => {
+            eprintln!("Invalid operation: {}", message)
+        }
+        RuntimeErrorType::ParserError => eprintln!("Parser error detected."),
     }
 }
 

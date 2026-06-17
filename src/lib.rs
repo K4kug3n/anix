@@ -1,5 +1,6 @@
 pub mod runner;
 
+mod environment;
 mod expr;
 mod interpreter;
 mod litteral;

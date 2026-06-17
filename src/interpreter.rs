@@ -1,3 +1,4 @@
+use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::litteral::Literal;
 use crate::stmt::Stmt;
@@ -24,6 +25,7 @@ fn is_equal(x: &Value, y: &Value) -> bool {
 pub enum RuntimeErrorType {
     TypeError { message: String },
     OperationError { message: String },
+    UndefinedVariable,
     ParserError,
 }
 
@@ -31,17 +33,23 @@ pub struct RuntimeError {
     pub kind: RuntimeErrorType,
     pub token: Token,
 }
-pub struct Interpreter {}
+
+pub struct Interpreter {
+    environment: Environment,
+}
 
 impl Interpreter {
     pub fn new() -> Interpreter {
-        Interpreter {}
+        Interpreter {
+            environment: Environment::new(),
+        }
     }
 
-    fn execute(&self, stmt: &Stmt) -> Result<(), RuntimeError> {
+    fn execute(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
             Stmt::Expr(expr) => self.visit_expr_stmt(expr),
             Stmt::Print(expr) => self.visit_print_stmt(expr),
+            Stmt::Var { name, init } => self.visit_var_stmt(name, init),
         }
     }
 
@@ -154,6 +162,7 @@ impl Interpreter {
             Expr::Literal(litteral) => self.evaluate_litteral(litteral),
             Expr::Grouping(group) => self.evaluate(group),
             Expr::Unary { op, right } => self.evaluate_unary(&op, right),
+            Expr::Variable(name) => self.evaluate_variable(name),
             Expr::Error(token) => Err(RuntimeError {
                 kind: RuntimeErrorType::ParserError,
                 token: token.clone(),
@@ -196,7 +205,17 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret(&self, statments: &Vec<Stmt>) -> Result<(), RuntimeError> {
+    fn evaluate_variable(&self, name: &Token) -> Result<Value, RuntimeError> {
+        match self.environment.get(name) {
+            Some(value) => Ok(value),
+            None => Err(RuntimeError {
+                kind: RuntimeErrorType::UndefinedVariable,
+                token: name.clone(),
+            }),
+        }
+    }
+
+    pub fn interpret(&mut self, statments: &Vec<Stmt>) -> Result<(), RuntimeError> {
         for stmt in statments {
             self.execute(stmt)?;
         }
@@ -224,6 +243,17 @@ impl Interpreter {
     fn visit_print_stmt(&self, expr: &Expr) -> Result<(), RuntimeError> {
         let value = self.evaluate(expr)?;
         println!("{}", value);
+
+        Ok(())
+    }
+
+    fn visit_var_stmt(&mut self, name: &Token, init: &Option<Expr>) -> Result<(), RuntimeError> {
+        let value = match init {
+            Some(expr) => self.evaluate(&expr)?,
+            None => Value::Nil,
+        };
+
+        self.environment.define(name, value);
 
         Ok(())
     }

@@ -16,6 +16,7 @@ pub enum Expr {
         op: Token,
         right: Box<Expr>,
     },
+    Variable(Token),
     Error(Token),
 }
 
@@ -53,6 +54,7 @@ pub fn print_ast(expr: &Expr) -> String {
         Expr::Unary { op, right } => {
             return parenthesize(&op.lexeme, vec![right]);
         }
+        Expr::Variable(var) => var.lexeme.clone(),
         Expr::Error(_) => {
             return "Error".to_string();
         }

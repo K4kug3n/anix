@@ -71,6 +71,14 @@ impl Parser {
         false
     }
 
+    fn declaration(&mut self) -> Stmt {
+        if self.matches(vec![TokenType::Var]) {
+            return self.var_declaration();
+        }
+
+        return self.statement();
+    }
+
     fn error(&mut self, msg: String, token: Token) {
         self.errors.push(ParserError {
             line: token.line,
@@ -149,7 +157,7 @@ impl Parser {
     pub fn parse(&mut self) -> Vec<Stmt> {
         let mut statments = Vec::new();
         while !self.is_at_end() {
-            statments.push(self.statement());
+            statments.push(self.declaration());
         }
 
         statments
@@ -176,6 +184,10 @@ impl Parser {
 
         if self.matches(vec![TokenType::Number, TokenType::String]) {
             return Expr::Literal(self.previous().literal.unwrap());
+        }
+
+        if self.matches(vec![TokenType::Identifier]) {
+            return Expr::Variable(self.previous());
         }
 
         if self.matches(vec![TokenType::LeftParen]) {
@@ -277,6 +289,37 @@ impl Parser {
         }
 
         self.primary()
+    }
+
+    fn var_declaration(&mut self) -> Stmt {
+        if !self.consume(TokenType::Identifier) {
+            let token = self.peek();
+
+            let msg = format!("Expected variable name, found {}", token.lexeme);
+            self.error(msg, token.clone());
+
+            self.synchronize();
+
+            return Stmt::Expr(Expr::Error(token));
+        }
+
+        let name = self.previous();
+        let mut init = None;
+        if self.matches(vec![TokenType::Equal]) {
+            init = Some(self.expression());
+        }
+
+        if !self.consume(TokenType::Semicolon) {
+            let token = self.peek();
+            let msg = format!("Expected ';' found {}", token.lexeme);
+            self.error(msg, token.clone());
+
+            self.synchronize();
+
+            return Stmt::Expr(Expr::Error(token));
+        }
+
+        return Stmt::Var { name, init };
     }
 }
 
@@ -451,6 +494,45 @@ mod tests {
                 right: Box::new(Expr::Literal(Literal::Num(value2)))
             })
         );
+    }
+
+    #[test]
+    fn test_var_init_stmt() {
+        let str = "var1";
+        let name = Token::from_literal(TokenType::Identifier, Literal::String(str.to_string()), 0);
+        let equal = Token::from_operand(TokenType::Equal, "=", 0);
+        let value = 12.3;
+        let num = Token::from_literal(TokenType::Number, Literal::Num(value), 0);
+
+        let var = Token::from_operand(TokenType::Var, "var", 0);
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
+
+        let tokens = vec![var, name.clone(), equal, num, sc];
+        let stmts = parse_tokens(tokens);
+
+        assert_eq!(stmts.len(), 1);
+        assert_eq!(
+            stmts[0],
+            Stmt::Var {
+                name,
+                init: Some(Expr::Literal(Literal::Num(value)))
+            }
+        );
+    }
+
+    #[test]
+    fn test_var_uninit_stmt() {
+        let str = "var1";
+        let name = Token::from_literal(TokenType::Identifier, Literal::String(str.to_string()), 0);
+
+        let var = Token::from_operand(TokenType::Var, "var", 0);
+        let sc = Token::from_operand(TokenType::Semicolon, ";", 0);
+
+        let tokens = vec![var, name.clone(), sc];
+        let stmts = parse_tokens(tokens);
+
+        assert_eq!(stmts.len(), 1);
+        assert_eq!(stmts[0], Stmt::Var { name, init: None });
     }
 
     #[test]

@@ -29,6 +29,9 @@ fn runtime_error(error: &RuntimeError) {
         RuntimeErrorType::OperationError { message } => {
             eprintln!("Invalid operation: {}", message)
         }
+        RuntimeErrorType::UndefinedVariable => {
+            eprintln!("Undefined variable")
+        }
         RuntimeErrorType::ParserError => eprintln!("Parser error detected."),
     }
 }
@@ -75,7 +78,7 @@ fn run(content: &String) -> bool {
         println!("{}: {}", i, stmt);
     }
 
-    let interpreter = Interpreter::new();
+    let mut interpreter = Interpreter::new();
     let error = interpreter.interpret(&stmts);
 
     match error {

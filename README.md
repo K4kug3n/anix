@@ -4,7 +4,8 @@ Implementation of [Crafting Interpreter](https://craftinginterpreters.com/) in R
 
 ## Grammar
 
-`expression = equality ;`  
+`expression = assignment ;`  
+`assignment = IDENTIFIER "=" equality | equality`
 `equality = comparison ( ( "!=" | "==" ) comparison )* ;`  
 `comparison = term ( ( ">" | ">=" | "<" | "<=" ) term )* ;`  
 `term = factor ( ( "-" | "+" ) factor )* ;`  

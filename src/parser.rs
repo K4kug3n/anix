@@ -32,6 +32,30 @@ impl Parser {
         self.previous()
     }
 
+    fn assignment(&mut self) -> Expr {
+        let expr = self.equality();
+        if self.matches(vec![TokenType::Equal]) {
+            let equal = self.previous();
+            let value = self.assignment();
+
+            if let Expr::Variable(name) = expr {
+                return Expr::Assign {
+                    name: name,
+                    value: Box::new(value),
+                };
+            }
+
+            let msg = format!("Invalid assignment target, found {}", expr);
+            self.error(msg, equal.clone());
+
+            self.synchronize();
+
+            return Expr::Error(equal);
+        }
+
+        expr
+    }
+
     fn check(&self, kind: TokenType) -> bool {
         if self.is_at_end() {
             return false;
@@ -105,7 +129,7 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Expr {
-        self.equality()
+        self.assignment()
     }
 
     fn expression_statement(&mut self) -> Stmt {

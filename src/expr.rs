@@ -5,6 +5,10 @@ use crate::token::Token;
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         op: Token,
@@ -39,6 +43,7 @@ fn parenthesize(name: &str, exprs: Vec<&Expr>) -> String {
 
 pub fn print_ast(expr: &Expr) -> String {
     match expr {
+        Expr::Assign { name, value } => return parenthesize(&name.lexeme, vec![value]),
         Expr::Binary { left, op, right } => {
             return parenthesize(&op.lexeme, vec![left, right]);
         }

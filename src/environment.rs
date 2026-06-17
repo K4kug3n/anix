@@ -14,6 +14,16 @@ impl Environment {
         }
     }
 
+    pub fn assign(&mut self, name: &Token, value: Value) -> bool {
+        if !self.values.contains_key(&name.lexeme) {
+            return false;
+        }
+
+        self.values.insert(name.lexeme.clone(), value);
+
+        true
+    }
+
     pub fn define(&mut self, name: &Token, value: Value) {
         self.values.insert(name.lexeme.clone(), value);
     }

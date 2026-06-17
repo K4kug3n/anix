@@ -53,8 +53,20 @@ impl Interpreter {
         }
     }
 
+    fn evaluate_assign(&mut self, name: &Token, expr: &Expr) -> Result<Value, RuntimeError> {
+        let value = self.evaluate(expr)?;
+        if !self.environment.assign(name, value.clone()) {
+            return Err(RuntimeError {
+                kind: RuntimeErrorType::UndefinedVariable,
+                token: name.clone(),
+            });
+        }
+
+        Ok(value)
+    }
+
     fn evaluate_binary(
-        &self,
+        &mut self,
         left: &Expr,
         op: &Token,
         right: &Expr,
@@ -156,8 +168,9 @@ impl Interpreter {
         }
     }
 
-    fn evaluate(&self, expr: &Expr) -> Result<Value, RuntimeError> {
+    fn evaluate(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
+            Expr::Assign { name, value } => self.evaluate_assign(name, value),
             Expr::Binary { left, op, right } => self.evaluate_binary(left, &op, right),
             Expr::Literal(litteral) => self.evaluate_litteral(litteral),
             Expr::Grouping(group) => self.evaluate(group),
@@ -179,7 +192,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_unary(&self, op: &Token, right: &Expr) -> Result<Value, RuntimeError> {
+    fn evaluate_unary(&mut self, op: &Token, right: &Expr) -> Result<Value, RuntimeError> {
         let value = self.evaluate(right)?;
 
         match op.kind {
@@ -234,13 +247,13 @@ impl Interpreter {
         true
     }
 
-    fn visit_expr_stmt(&self, expr: &Expr) -> Result<(), RuntimeError> {
+    fn visit_expr_stmt(&mut self, expr: &Expr) -> Result<(), RuntimeError> {
         self.evaluate(expr)?;
 
         Ok(())
     }
 
-    fn visit_print_stmt(&self, expr: &Expr) -> Result<(), RuntimeError> {
+    fn visit_print_stmt(&mut self, expr: &Expr) -> Result<(), RuntimeError> {
         let value = self.evaluate(expr)?;
         println!("{}", value);
 

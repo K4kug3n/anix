@@ -1,7 +1,7 @@
 use crate::expr::Expr;
+use crate::litteral::Literal;
 use crate::stmt::Stmt;
 use crate::token::{Token, TokenType};
-use crate::types::Literal;
 
 pub struct ParserError {
     pub line: usize,

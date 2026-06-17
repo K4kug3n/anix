@@ -1,14 +1,7 @@
-use crate::{expr::Expr, stmt::Stmt, token::TokenType, types::Literal};
+use crate::value::Value;
+use crate::{expr::Expr, litteral::Literal, stmt::Stmt, token::TokenType};
 
 use std::fmt::{self, format};
-
-#[derive(PartialEq)]
-pub enum Value {
-    Number(f64),
-    String(String),
-    Boolean(bool),
-    Nil,
-}
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

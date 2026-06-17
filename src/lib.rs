@@ -2,8 +2,9 @@ pub mod runner;
 
 mod expr;
 mod interpreter;
+mod litteral;
 mod parser;
 mod scanner;
 mod stmt;
 mod token;
-mod types;
+mod value;

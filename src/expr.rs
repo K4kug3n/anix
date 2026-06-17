@@ -1,7 +1,7 @@
 use std::fmt;
 
+use crate::litteral::Literal;
 use crate::token::Token;
-use crate::types::Literal;
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
